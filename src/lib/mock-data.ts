@@ -1,5 +1,6 @@
 import { Service, Staff, Customer, Appointment } from '@/lib/types';
 import { add, subDays, addMinutes, set, addDays } from 'date-fns';
+import { memoize } from 'lodash';
 
 // Mock Services
 export const mockServices: Service[] = [
@@ -29,23 +30,27 @@ export const mockCustomers: Customer[] = [
 ];
 
 // Mock Appointments
-const today = new Date();
-export const mockAppointments: Appointment[] = Array.from({ length: 25 }, (_, i) => {
-  const customer = mockCustomers[i % mockCustomers.length];
-  const service = mockServices[i % mockServices.length];
-  const staff = mockStaff[i % mockStaff.length];
-  const dayOffset = (i % 5) - 2; // Appointments from 2 days ago to 2 days in the future
-  const hour = 9 + (i % 8); // Appointments between 9 AM and 4 PM
-  const minute = (i % 4) * 15;
-  const startTime = set(addDays(today, dayOffset), { hours: hour, minutes: minute, seconds: 0, milliseconds: 0 });
+const generateMockAppointments = memoize((): Appointment[] => {
+  const today = new Date();
+  return Array.from({ length: 25 }, (_, i) => {
+    const customer = mockCustomers[i % mockCustomers.length];
+    const service = mockServices[i % mockServices.length];
+    const staff = mockStaff[i % mockStaff.length];
+    const dayOffset = (i % 5) - 2; // Appointments from 2 days ago to 2 days in the future
+    const hour = 9 + (i % 8); // Appointments between 9 AM and 4 PM
+    const minute = (i % 4) * 15;
+    const startTime = set(addDays(today, dayOffset), { hours: hour, minutes: minute, seconds: 0, milliseconds: 0 });
 
-  return {
-    id: `${i + 1}`,
-    customerName: customer.name,
-    serviceId: service.id,
-    staffId: staff.id,
-    startTime,
-    endTime: addMinutes(startTime, service.duration),
-    status: i % 4 === 0 ? 'Cancelled' : (startTime < today ? 'Completed' : 'Confirmed'),
-  };
+    return {
+      id: `${i + 1}`,
+      customerName: customer.name,
+      serviceId: service.id,
+      staffId: staff.id,
+      startTime,
+      endTime: addMinutes(startTime, service.duration),
+      status: i % 4 === 0 ? 'Cancelled' : (startTime < today ? 'Completed' : 'Confirmed'),
+    };
+  });
 });
+
+export const mockAppointments = generateMockAppointments();
