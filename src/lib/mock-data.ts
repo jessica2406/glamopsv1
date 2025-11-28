@@ -1,5 +1,5 @@
 import { Service, Staff, Customer, Appointment } from '@/lib/types';
-import { add, subDays, addMinutes, set, addDays } from 'date-fns';
+import { addMinutes, set, subDays } from 'date-fns';
 import { memoize } from 'lodash';
 
 // Mock Services
@@ -29,9 +29,15 @@ export const mockCustomers: Customer[] = [
   { id: '5', name: 'Olivia Gray', email: 'olivia@example.com', phone: '555-0105', totalAppointments: 12, lastVisit: subDays(new Date(), 2) },
 ];
 
-// Mock Appointments
 const generateMockAppointments = memoize((): Appointment[] => {
-  const today = new Date();
+  // Use a fixed date to ensure server and client renders are the same.
+  const today = new Date('2024-07-29T12:00:00.000Z');
+  const addDays = (date: Date, days: number): Date => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
   return Array.from({ length: 25 }, (_, i) => {
     const customer = mockCustomers[i % mockCustomers.length];
     const service = mockServices[i % mockServices.length];
@@ -52,5 +58,6 @@ const generateMockAppointments = memoize((): Appointment[] => {
     };
   });
 });
+
 
 export const mockAppointments = generateMockAppointments();
