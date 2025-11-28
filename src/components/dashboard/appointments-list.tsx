@@ -32,8 +32,8 @@ export function AppointmentsList() {
                                         <AvatarFallback>{staff?.name.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 space-y-1">
-                                        <p className="text-sm font-medium leading-none">{appointment.customerName}</p>
-                                        <p className="text-sm text-muted-foreground">{service?.name}</p>
+                                        <p className="text-sm font-medium leading-none" suppressHydrationWarning>{appointment.customerName}</p>
+                                        <p className="text-sm text-muted-foreground" suppressHydrationWarning>{service?.name}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm font-medium">{format(appointment.startTime, "h:mm a")}</p>
