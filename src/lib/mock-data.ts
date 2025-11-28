@@ -1,6 +1,5 @@
 import { Service, Staff, Customer, Appointment } from '@/lib/types';
-import { addMinutes, set, subDays } from 'date-fns';
-import { memoize } from 'lodash';
+import { addMinutes, set, subDays, addDays } from 'date-fns';
 
 // Mock Services
 export const mockServices: Service[] = [
@@ -29,10 +28,11 @@ export const mockCustomers: Customer[] = [
   { id: '5', name: 'Olivia Gray', email: 'olivia@example.com', phone: '555-0105', totalAppointments: 12, lastVisit: subDays(new Date(), 2) },
 ];
 
-const generateMockAppointments = memoize((): Appointment[] => {
+export const generateMockAppointments = (): Appointment[] => {
   // Use a fixed date to ensure server and client renders are the same.
   const today = new Date('2024-07-29T12:00:00.000Z');
-  const addDays = (date: Date, days: number): Date => {
+  
+  const addDaysLocal = (date: Date, days: number): Date => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
@@ -45,7 +45,7 @@ const generateMockAppointments = memoize((): Appointment[] => {
     const dayOffset = (i % 5) - 2; // Appointments from 2 days ago to 2 days in the future
     const hour = 9 + (i % 8); // Appointments between 9 AM and 4 PM
     const minute = (i % 4) * 15;
-    const startTime = set(addDays(today, dayOffset), { hours: hour, minutes: minute, seconds: 0, milliseconds: 0 });
+    const startTime = set(addDaysLocal(today, dayOffset), { hours: hour, minutes: minute, seconds: 0, milliseconds: 0 });
 
     return {
       id: `${i + 1}`,
@@ -57,7 +57,7 @@ const generateMockAppointments = memoize((): Appointment[] => {
       status: i % 4 === 0 ? 'Cancelled' : (startTime < today ? 'Completed' : 'Confirmed'),
     };
   });
-});
+};
 
 
 export const mockAppointments = generateMockAppointments();

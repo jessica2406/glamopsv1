@@ -1,6 +1,8 @@
 "use client"
 
-import { mockAppointments, mockServices, mockStaff } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+import { mockServices, mockStaff, generateMockAppointments } from "@/lib/mock-data"
+import { Appointment } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -8,7 +10,14 @@ import { format } from "date-fns"
 import { ScrollArea } from "../ui/scroll-area"
 
 export function AppointmentsList() {
-    const recentAppointments = mockAppointments
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+    useEffect(() => {
+        // Generate appointments on the client side to avoid hydration mismatch
+        setAppointments(generateMockAppointments());
+    }, []);
+
+    const recentAppointments = appointments
         .filter(a => a.status === "Confirmed")
         .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
         .slice(0, 7);
