@@ -3,18 +3,34 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ChartTooltipContent } from "@/components/ui/chart"
+import { useState, useEffect } from "react"
 
-const data = [
-  { name: "Mon", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Tue", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Wed", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Thu", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Fri", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Sat", total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: "Sun", total: Math.floor(Math.random() * 5000) + 1000 },
+const initialData = [
+  { name: "Mon", total: 0 },
+  { name: "Tue", total: 0 },
+  { name: "Wed", total: 0 },
+  { name: "Thu", total: 0 },
+  { name
+: "Fri", total: 0 },
+  { name: "Sat", total: 0 },
+  { name: "Sun", total: 0 },
 ]
 
 export function RevenueChart() {
+  const [data, setData] = useState(initialData)
+
+  useEffect(() => {
+    setData([
+      { name: "Mon", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Tue", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Wed", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Thu", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Fri", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Sat", total: Math.floor(Math.random() * 5000) + 1000 },
+      { name: "Sun", total: Math.floor(Math.random() * 5000) + 1000 },
+    ])
+  }, [])
+
   return (
     <Card className="shadow-sm">
       <CardHeader>

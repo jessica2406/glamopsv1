@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { mockAppointments, mockServices, mockStaff } from '@/lib/mock-data';
-import { format, startOfWeek, addDays, eachHourOfInterval, startOfHour, differenceInMinutes, areIntervalsOverlapping } from 'date-fns';
+import { format, startOfWeek, addDays, eachHourOfInterval, setHours, differenceInMinutes, areIntervalsOverlapping } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -17,8 +17,8 @@ export function CalendarView() {
 
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const timeSlots = eachHourOfInterval({
-    start: setHours(new Date(), 8),
-    end: setHours(new Date(), 20),
+    start: setHours(new Date(0), 8),
+    end: setHours(new Date(0), 20),
   });
 
   const handlePrevWeek = () => {
@@ -32,12 +32,6 @@ export function CalendarView() {
   const handleToday = () => {
     setCurrentDate(new Date());
   };
-  
-  function setHours(date: Date, hours: number) {
-      const newDate = new Date(date);
-      newDate.setHours(hours, 0, 0, 0);
-      return newDate;
-  }
 
   return (
     <Card>
