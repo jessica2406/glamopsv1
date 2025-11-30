@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { mockServices } from '@/lib/mock-data';
+import { useServices } from '@/hooks/use-app-data'; // Changed import
 import { Service } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -15,21 +15,23 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 
 function ServiceForm({ service, onSave }: { service?: Service | null, onSave: (service: Service) => void }) {
-  // In a real app, this would use react-hook-form
   const [name, setName] = useState(service?.name || '');
   const [description, setDescription] = useState(service?.description || '');
   const [price, setPrice] = useState(service?.price || 0);
   const [duration, setDuration] = useState(service?.duration || 0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      id: service?.id || new Date().toISOString(),
+    setIsSubmitting(true);
+    await onSave({
+      id: service?.id || '', // ID is handled by hook for new items
       name,
       description,
       price,
       duration
     });
+    setIsSubmitting(false);
   }
 
   return (
@@ -52,28 +54,39 @@ function ServiceForm({ service, onSave }: { service?: Service | null, onSave: (s
           <Input id="duration" type="number" value={duration} onChange={e => setDuration(Number(e.target.value))} required />
         </div>
       </div>
-      <Button type="submit" className="w-full">Save Service</Button>
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Save Service
+      </Button>
     </form>
   )
 }
 
 export function ServicesTable() {
-  const [services, setServices] = useState(mockServices);
+  const { services, loading, addService, updateService, deleteService } = useServices(); // Use Hook
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  const handleSave = (service: Service) => {
-    if (editingService) {
-      setServices(services.map(s => s.id === service.id ? service : s));
-    } else {
-      setServices([service, ...services]);
+  const handleSave = async (service: Service) => {
+    try {
+      if (editingService && service.id) {
+        await updateService(service.id, service);
+      } else {
+        await addService(service);
+      }
+      setIsFormOpen(false);
+      setEditingService(null);
+    } catch (error) {
+      console.error("Error saving service:", error);
     }
-    setIsFormOpen(false);
-    setEditingService(null);
   };
 
-  const handleDelete = (id: string) => {
-    setServices(services.filter(s => s.id !== id));
+  const handleDelete = async (id: string) => {
+    await deleteService(id);
+  }
+
+  if (loading) {
+    return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
@@ -110,7 +123,7 @@ export function ServicesTable() {
               <TableRow key={service.id}>
                 <TableCell className="font-medium">{service.name}</TableCell>
                 <TableCell>{service.duration} min</TableCell>
-                <TableCell className="text-right">₹{service.price.toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{Number(service.price).toFixed(2)}</TableCell>
                 <TableCell>
                   <AlertDialog>
                     <DropdownMenu>

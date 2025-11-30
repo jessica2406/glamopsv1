@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { format } from "date-fns";
+import { Users } from "lucide-react";
 
 const steps = [
   { id: 1, name: "Select Service" },
@@ -121,21 +122,57 @@ export function BookingWizard() {
           </div>
         )}
         {step === 3 && (
-            <RadioGroup value={selectedStaff || ""} onValueChange={setSelectedStaff}>
-              <div className="grid grid-cols-2 gap-4">
-                {mockStaff.map((staff) => (
-                  <Label key={staff.id} htmlFor={staff.id} className={cn("rounded-md border p-4 text-center transition-all hover:bg-accent/50", selectedStaff === staff.id && "bg-accent border-primary")}>
-                    <RadioGroupItem value={staff.id} id={staff.id} className="sr-only" />
-                    <Avatar className="w-20 h-20 mx-auto mb-2">
-                        <AvatarImage src={staff.avatarUrl} />
-                        <AvatarFallback>{staff.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold">{staff.name}</p>
-                  </Label>
-                ))}
-              </div>
-            </RadioGroup>
+  <RadioGroup 
+    value={selectedStaff || "no-preference"} 
+    onValueChange={setSelectedStaff}
+  >
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      
+      {/* 1. No Preference Option */}
+      <Label
+        htmlFor="no-preference"
+        className={cn(
+          "cursor-pointer flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-card p-4 text-center shadow-sm ring-1 ring-border transition-all hover:bg-accent hover:ring-primary/50",
+          (selectedStaff === "no-preference" || !selectedStaff) && "border-primary bg-primary/5 ring-primary"
         )}
+      >
+        <RadioGroupItem value="no-preference" id="no-preference" className="sr-only" />
+        
+        {/* Icon Avatar */}
+        <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Users className="h-8 w-8" />
+        </div>
+        
+        <p className="font-semibold text-foreground">No Preference</p>
+        <p className="text-xs text-muted-foreground mt-1">Maximum availability</p>
+      </Label>
+
+      {/* 2. Existing Staff Map */}
+      {mockStaff.map((staff) => (
+        <Label
+          key={staff.id}
+          htmlFor={staff.id}
+          className={cn(
+            "cursor-pointer flex flex-col items-center justify-center rounded-xl border-2 border-transparent bg-card p-4 text-center shadow-sm ring-1 ring-border transition-all hover:bg-accent hover:ring-primary/50",
+            selectedStaff === staff.id && "border-primary bg-primary/5 ring-primary"
+          )}
+        >
+          <RadioGroupItem value={staff.id} id={staff.id} className="sr-only" />
+          
+          <Avatar className="mb-3 h-20 w-20 ring-2 ring-background shadow-sm">
+            <AvatarImage src={staff.avatarUrl} className="object-cover" />
+            <AvatarFallback className="bg-muted text-muted-foreground">
+                {staff.name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          
+          <p className="font-semibold text-foreground">{staff.name}</p>
+          <p className="text-xs text-muted-foreground mt-1">Stylist</p>
+        </Label>
+      ))}
+    </div>
+  </RadioGroup>
+)}
         {step === 4 && (
             <div className="space-y-4">
                 <div>

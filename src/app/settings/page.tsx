@@ -1,3 +1,5 @@
+"use client";
+
 import { AppLayout } from "@/components/app-layout";
 import { SettingsContent } from "@/components/settings/settings-content";
 

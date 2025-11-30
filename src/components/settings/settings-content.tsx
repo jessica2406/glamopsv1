@@ -9,11 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Copy } from "lucide-react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export function SettingsContent() {
     const { toast } = useToast();
-    const embedCode = `<iframe src="${window.location.origin}/book" style="width:100%;height:700px;border:none;" title="GlamFlow Booking"></iframe>`;
+    const [embedCode, setEmbedCode] = useState("");
 
+    // Run only in the browser
+    useEffect(() => {
+        setEmbedCode(`<iframe src="${window.location.origin}/book" style="width:100%;height:700px;border:none;" title="GlamFlow Booking"></iframe>`);
+    }, []);
     const copyToClipboard = () => {
         navigator.clipboard.writeText(embedCode);
         toast({

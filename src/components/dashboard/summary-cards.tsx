@@ -1,36 +1,51 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Calendar, DollarSign, Activity } from "lucide-react"
+import { Users, Calendar, DollarSign, Activity, Loader2 } from "lucide-react"
+import { useSalonData } from "@/hooks/use-salon-data" // Import the hook
 
 export function SummaryCards() {
+  const { stats, loading } = useSalonData(); // Use real data
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+         {[1,2,3,4].map(i => (
+           <Card key={i} className="h-32 flex items-center justify-center">
+             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+           </Card>
+         ))}
+      </div>
+    )
+  }
+
   const summaryData = [
     {
       title: "Today's Revenue",
-      value: "₹8,450",
+      value: `₹${stats.revenue.toLocaleString()}`, // Real Value
       icon: DollarSign,
-      change: "+15.2% from last week",
+      change: "Daily Real-time",
       color: "text-green-500",
     },
     {
       title: "Appointments Today",
-      value: "12",
+      value: stats.appointmentsToday.toString(), // Real Value
       icon: Calendar,
-      change: "+2 since yesterday",
+      change: "Scheduled for today",
       color: "text-blue-500",
     },
     {
-      title: "New Customers",
-      value: "4",
+      title: "Total Customers",
+      value: stats.customersTotal.toString(), // Real Value
       icon: Users,
-      change: "This week",
+      change: "All time unique",
       color: "text-purple-500",
     },
     {
       title: "Salon Occupancy",
-      value: "78%",
+      value: `${stats.occupancy}%`, // Calculated Value
       icon: Activity,
-      change: "Peak hours: 1-3 PM",
+      change: "Based on capacity",
       color: "text-amber-500",
     },
   ]

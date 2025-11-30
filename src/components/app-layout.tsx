@@ -21,7 +21,7 @@ import { Button } from './ui/button';
 import { ThemeToggle } from './theme-toggle';
 
 const navItems = [
-    { href: '/', icon: Home, label: 'Dashboard', tooltip: 'Dashboard' },
+    { href: '/demo', icon: Home, label: 'Dashboard', tooltip: 'Dashboard' },
     { href: '/calendar', icon: Calendar, label: 'Calendar', tooltip: 'Calendar' },
     { href: '/services', icon: Scissors, label: 'Services', tooltip: 'Services' },
     { href: '/staff', icon: Users, label: 'Staff', tooltip: 'Staff' },
