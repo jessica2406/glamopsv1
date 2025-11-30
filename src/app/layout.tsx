@@ -1,10 +1,19 @@
-import type {Metadata} from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'GlamFlow',
   description: 'Salon Management Made Easy',
+};
+
+// FIX: This stops the automatic zoom on mobile devices
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // maximumScale: 1,  <-- REMOVE THIS
+  // userScalable: false, <-- REMOVE THIS OR SET TO TRUE
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
