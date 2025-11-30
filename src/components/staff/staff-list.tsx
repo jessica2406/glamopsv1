@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from 'react';
-import { useStaff } from '@/hooks/use-app-data'; // Changed import
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase'; // Ensure this points to your firebase.ts config
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc 
+} from "firebase/firestore";
 import { Staff } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, User as UserIcon, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,32 +23,41 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-function StaffForm({ staffMember, onSave }: { staffMember?: Staff | null, onSave: (staff: Staff) => void }) {
+// --- Form Component (Unchanged logic, just keeping it here) ---
+function StaffForm({ staffMember, onSave }: { staffMember?: Staff | null, onSave: (staff: Staff) => Promise<void> }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // FIX 1: added <HTMLFormElement> to tell TypeScript this is a form event
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
+    try {
+      // FIX 1 continued: e.currentTarget is now correctly typed as HTMLFormElement
+      const formData = new FormData(e.currentTarget);
+      const data = Object.fromEntries(formData.entries());
 
-    await onSave({
-      id: staffMember?.id || '',
-      name: data.name as string,
-      email: data.email as string,
-      role: data.role as 'owner' | 'staff',
-      avatarUrl: staffMember?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`, // Dynamic avatar
-      workingHours: {
-          start: data.start_time as string,
-          end: data.end_time as string,
-      },
-      active: true
-    });
-    setIsSubmitting(false);
+      await onSave({
+        id: staffMember?.id || '',
+        name: data.name as string,
+        email: data.email as string,
+        role: data.role as 'owner' | 'staff',
+        avatarUrl: staffMember?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
+        workingHours: {
+            start: data.start_time as string,
+            end: data.end_time as string,
+        },
+        // FIX 2: Removed 'active: true' because your Staff type doesn't have it
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ... The rest of the JSX stays exactly the same ... */}
       <div className="flex items-center space-x-4">
         <Avatar className="h-16 w-16">
           <AvatarImage src={staffMember?.avatarUrl} />
@@ -88,27 +105,63 @@ function StaffForm({ staffMember, onSave }: { staffMember?: Staff | null, onSave
   )
 }
 
+// --- Main Component with Realtime Logic ---
 export function StaffList() {
-  const { staff, loading, addStaff, updateStaff, deleteStaff } = useStaff(); // Use Hook
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
 
+  // 1. REALTIME LISTENER (The Fix)
+  useEffect(() => {
+    // This connects directly to Firestore. 
+    // When data changes in DB, this runs automatically.
+    const unsubscribe = onSnapshot(collection(db, "staff"), (snapshot) => {
+      const staffData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Staff[];
+      
+      setStaff(staffData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching staff:", error);
+      setLoading(false);
+    });
+
+    // Cleanup connection when component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Add / Update Logic
   const handleSave = async (staffMember: Staff) => {
     try {
       if (editingStaff && staffMember.id) {
-        await updateStaff(staffMember.id, staffMember);
+        // Update existing
+        const docRef = doc(db, "staff", staffMember.id);
+        // Remove ID from data payload
+        const { id, ...data } = staffMember; 
+        await updateDoc(docRef, data);
       } else {
-        await addStaff(staffMember);
+        // Add new
+        const { id, ...data } = staffMember;
+        await addDoc(collection(db, "staff"), data);
       }
       setIsFormOpen(false);
       setEditingStaff(null);
     } catch (e) {
       console.error("Error saving staff", e);
+      alert("Failed to save. Check console.");
     }
   };
 
+  // 3. Delete Logic
   const handleDelete = async (id: string) => {
-    await deleteStaff(id);
+    try {
+      await deleteDoc(doc(db, "staff", id));
+    } catch (e) {
+      console.error("Error deleting staff", e);
+    }
   }
   
   if (loading) {
@@ -182,6 +235,11 @@ export function StaffList() {
             </div>
           </Card>
         ))}
+        {staff.length === 0 && (
+            <div className="col-span-full text-center text-muted-foreground py-10">
+                No staff members found. Add one to get started!
+            </div>
+        )}
       </div>
     </div>
   );
