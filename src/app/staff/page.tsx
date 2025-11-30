@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/app-layout";
 import { StaffList } from "@/components/staff/staff-list";
+export const dynamic = 'force-dynamic';
 
 export default function StaffPage() {
   return (

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { AppLayout } from "@/components/app-layout";
 import { CalendarView } from "@/components/calendar/calendar-view";
 

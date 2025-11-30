@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/app-layout";
 import { ServicesTable } from "@/components/services/services-table";
+export const dynamic = 'force-dynamic';
 
 export default function ServicesPage() {
   return (
