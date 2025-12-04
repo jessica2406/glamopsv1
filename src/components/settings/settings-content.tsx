@@ -17,7 +17,7 @@ export function SettingsContent() {
 
     // Run only in the browser
     useEffect(() => {
-        setEmbedCode(`<iframe src="${window.location.origin}/book" style="width:100%;height:700px;border:none;" title="GlamFlow Booking"></iframe>`);
+        setEmbedCode(`<iframe src="${window.location.origin}/book" style="width:100%;height:700px;border:none;" title="GlamOps Booking"></iframe>`);
     }, []);
     const copyToClipboard = () => {
         navigator.clipboard.writeText(embedCode);

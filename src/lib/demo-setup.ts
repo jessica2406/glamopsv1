@@ -38,7 +38,7 @@ async function createMockSalonData(user: User) {
   // --- 1. Create Salon Doc ---
   batch.set(salonRef, {
     ownerId: user.uid,
-    name: "GlamFlow Demo Salon",
+    name: "GlamOps Demo Salon",
     slug: "demo",
     createdAt: new Date(),
     currency: "USD",

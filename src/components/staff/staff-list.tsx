@@ -1,243 +1,179 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase'; // Ensure this points to your firebase.ts config
-import { 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc 
-} from "firebase/firestore";
-import { Staff } from '@/lib/types';
+import { db } from '@/lib/firebase'; 
+import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import { Staff } from '@/types'; // Use the central types file we created
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, User as UserIcon, Loader2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PlusCircle, Loader2, User as UserIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSalon } from '@/hooks/useSalon'; // Use the hook for consistency
+import { StaffActions } from './staff-actions'; // <--- The component we just built
 
-// --- Form Component (Unchanged logic, just keeping it here) ---
-function StaffForm({ staffMember, onSave }: { staffMember?: Staff | null, onSave: (staff: Staff) => Promise<void> }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // FIX 1: added <HTMLFormElement> to tell TypeScript this is a form event
+// --- Simplified Form just for "Create" ---
+function CreateStaffForm({ onSave, loading }: { onSave: (data: any) => Promise<void>, loading: boolean }) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      // FIX 1 continued: e.currentTarget is now correctly typed as HTMLFormElement
-      const formData = new FormData(e.currentTarget);
-      const data = Object.fromEntries(formData.entries());
-
-      await onSave({
-        id: staffMember?.id || '',
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+    
+    await onSave({
         name: data.name as string,
         email: data.email as string,
-        role: data.role as 'owner' | 'staff',
-        avatarUrl: staffMember?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
+        role: data.role as string,
+        // Default avatar logic
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
         workingHours: {
             start: data.start_time as string,
             end: data.end_time as string,
         },
-        // FIX 2: Removed 'active: true' because your Staff type doesn't have it
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ... The rest of the JSX stays exactly the same ... */}
-      <div className="flex items-center space-x-4">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={staffMember?.avatarUrl} />
-          <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
-        </Avatar>
-        <Button type="button" variant="outline" disabled>Upload Photo (Coming Soon)</Button>
-      </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="name">Full Name</Label>
-          <Input id="name" name="name" defaultValue={staffMember?.name} required />
+          <Input id="name" name="name" required placeholder="Ex. Sarah Jones" />
         </div>
         <div>
-          <Label htmlFor="email">Email Address</Label>
-          <Input id="email" name="email" type="email" defaultValue={staffMember?.email} required />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" required placeholder="sarah@example.com" />
         </div>
       </div>
       <div>
         <Label htmlFor="role">Role</Label>
-        <Select name="role" defaultValue={staffMember?.role || 'staff'}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a role" />
-          </SelectTrigger>
+        <Select name="role" defaultValue="staff">
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="staff">Staff</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
             <SelectItem value="owner">Owner</SelectItem>
           </SelectContent>
         </Select>
       </div>
        <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="start_time">Working Hours Start</Label>
-          <Input id="start_time" name="start_time" type="time" defaultValue={staffMember?.workingHours?.start || '09:00'} required />
+          <Label htmlFor="start_time">Start Time</Label>
+          <Input id="start_time" name="start_time" type="time" defaultValue="09:00" required />
         </div>
         <div>
-          <Label htmlFor="end_time">Working Hours End</Label>
-          <Input id="end_time" name="end_time" type="time" defaultValue={staffMember?.workingHours?.end || '17:00'} required />
+          <Label htmlFor="end_time">End Time</Label>
+          <Input id="end_time" name="end_time" type="time" defaultValue="17:00" required />
         </div>
       </div>
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Save Staff Member
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Add Staff Member
       </Button>
     </form>
   )
 }
 
-// --- Main Component with Realtime Logic ---
 export function StaffList() {
+  const { salon } = useSalon(); // Use the standardized hook
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
-  // 1. REALTIME LISTENER (The Fix)
+  // 1. Fetch Staff (Realtime)
   useEffect(() => {
-    // This connects directly to Firestore. 
-    // When data changes in DB, this runs automatically.
-    const unsubscribe = onSnapshot(collection(db, "staff"), (snapshot) => {
+    if (!salon) return;
+
+    // Use the 'salons' path to match the rest of the app
+    const q = collection(db, "salons", salon.id, "staff");
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const staffData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       })) as Staff[];
-      
       setStaff(staffData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching staff:", error);
       setLoading(false);
     });
 
-    // Cleanup connection when component unmounts
     return () => unsubscribe();
-  }, []);
+  }, [salon]);
 
-  // 2. Add / Update Logic
-  const handleSave = async (staffMember: Staff) => {
+  // 2. Create Logic Only (Edit/Delete is handled by StaffActions)
+  const handleCreate = async (data: any) => {
+    if (!salon) return;
+    setIsCreating(true);
     try {
-      if (editingStaff && staffMember.id) {
-        // Update existing
-        const docRef = doc(db, "staff", staffMember.id);
-        // Remove ID from data payload
-        const { id, ...data } = staffMember; 
-        await updateDoc(docRef, data);
-      } else {
-        // Add new
-        const { id, ...data } = staffMember;
-        await addDoc(collection(db, "staff"), data);
-      }
-      setIsFormOpen(false);
-      setEditingStaff(null);
+      await addDoc(collection(db, "salons", salon.id, "staff"), data);
+      setIsCreateOpen(false); // Close modal
     } catch (e) {
-      console.error("Error saving staff", e);
-      alert("Failed to save. Check console.");
+      console.error("Error creating staff", e);
+      alert("Failed to create staff");
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  // 3. Delete Logic
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "staff", id));
-    } catch (e) {
-      console.error("Error deleting staff", e);
-    }
-  }
-  
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      {/* Top Bar */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold tracking-tight">Team Members</h2>
+        
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditingStaff(null)}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Staff
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Staff
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}</DialogTitle>
+                <DialogTitle>Add New Staff Member</DialogTitle>
               </DialogHeader>
-              <StaffForm staffMember={editingStaff} onSave={handleSave} />
+              <CreateStaffForm onSave={handleCreate} loading={isCreating} />
             </DialogContent>
         </Dialog>
       </div>
+
+      {/* Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {staff.map((member) => (
-          <Card key={member.id} className="relative">
+          <Card key={member.id} className="relative group hover:shadow-md transition-all">
             <CardContent className="pt-6 flex flex-col items-center text-center">
-              <Avatar className="w-24 h-24 mb-4">
+              <Avatar className="w-24 h-24 mb-4 ring-2 ring-offset-2 ring-primary/10">
                 <AvatarImage src={member.avatarUrl} alt={member.name} />
-                <AvatarFallback>{member.name ? member.name.charAt(0) : "U"}</AvatarFallback>
+                <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
               </Avatar>
-              <p className="font-semibold">{member.name}</p>
-              <p className="text-sm text-muted-foreground">{member.email}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {member.workingHours?.start} - {member.workingHours?.end}
-              </p>
-              {member.role === 'owner' && <Badge variant="secondary" className="mt-2">Owner</Badge>}
+              
+              <h3 className="font-semibold text-lg">{member.name}</h3>
+              <p className="text-sm text-muted-foreground">{member.role}</p>
+              
+              <div className="mt-2 text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                {member.workingHours?.start || "09:00"} - {member.workingHours?.end || "17:00"}
+              </div>
+
+              {/* The New Actions Component handles Edit & Delete */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <StaffActions staff={member} />
+              </div>
+              
             </CardContent>
-            <div className="absolute top-2 right-2">
-                <AlertDialog>
-                  <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditingStaff(member); setIsFormOpen(true); }}>
-                          Edit
-                      </DropdownMenuItem>
-                      <AlertDialogTrigger asChild>
-                         <DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>
-                      </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                  </DropdownMenu>
-                  <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete {member.name}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(member.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
           </Card>
         ))}
+        
         {staff.length === 0 && (
-            <div className="col-span-full text-center text-muted-foreground py-10">
-                No staff members found. Add one to get started!
+            <div className="col-span-full flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20">
+                <UserIcon className="h-10 w-10 mb-3 opacity-50" />
+                <p>No staff members found.</p>
+                <Button variant="link" onClick={() => setIsCreateOpen(true)}>Add your first team member</Button>
             </div>
         )}
       </div>

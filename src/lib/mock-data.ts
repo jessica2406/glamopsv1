@@ -13,10 +13,10 @@ export const mockServices: Service[] = [
 
 // Mock Staff
 export const mockStaff: Staff[] = [
-  { id: '1', name: 'Alex Johnson', email: 'alex@glamflow.com', role: 'owner', avatarUrl: 'https://picsum.photos/seed/staff1/100/100', workingHours: { start: '09:00', end: '17:00' } },
-  { id: '2', name: 'Maria Garcia', email: 'maria@glamflow.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff2/100/100', workingHours: { start: '09:00', end: '17:00' } },
-  { id: '3', name: 'James Smith', email: 'james@glamflow.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff3/100/100', workingHours: { start: '10:00', end: '18:00' } },
-  { id: '4', name: 'Chloe Williams', email: 'chloe@glamflow.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff4/100/100', workingHours: { start: '11:00', end: '19:00' } },
+  { id: '1', name: 'Alex Johnson', email: 'alex@glamops.com', role: 'owner', avatarUrl: 'https://picsum.photos/seed/staff1/100/100', workingHours: { start: '09:00', end: '17:00' } },
+  { id: '2', name: 'Maria Garcia', email: 'maria@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff2/100/100', workingHours: { start: '09:00', end: '17:00' } },
+  { id: '3', name: 'James Smith', email: 'james@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff3/100/100', workingHours: { start: '10:00', end: '18:00' } },
+  { id: '4', name: 'Chloe Williams', email: 'chloe@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff4/100/100', workingHours: { start: '11:00', end: '19:00' } },
 ];
 
 // Mock Customers

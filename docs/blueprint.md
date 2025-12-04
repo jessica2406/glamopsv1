@@ -1,4 +1,4 @@
-# **App Name**: GlamFlow
+# **App Name**: GlamOps
 
 ## Core Features:
 

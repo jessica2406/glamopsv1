@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/app-layout";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { AppointmentsList } from "@/components/dashboard/appointments-list";
+import { mockAppointments } from "@/lib/mock-data";
 import { Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -62,7 +63,10 @@ export default function DemoDashboardPage() {
             </div>
           </div>
           <div className="lg:col-span-3 min-w-0 overflow-hidden rounded-xl border bg-card">
-             <AppointmentsList />
+             <AppointmentsList 
+    appointments={mockAppointments} 
+    currency="USD"
+/>
           </div>
         </div>
       </div>

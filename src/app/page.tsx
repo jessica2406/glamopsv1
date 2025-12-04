@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link"; // <--- 1. Import Link
 import { startInstantDemo } from "@/lib/demo-setup";
 import { Sparkles, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,8 @@ export default function LandingPage() {
     setIsLoading(true);
     try {
       await startInstantDemo();
-      router.push("/demo");
+      // 2. FIX: Redirect to dashboard (Unified view), not /demo
+      router.push("/dashboard"); 
     } catch (error) {
       console.error("Failed to start demo:", error);
       setIsLoading(false);
@@ -23,20 +25,22 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      {/* Navbar Placeholder */}
+      {/* Navbar */}
       <header className="flex h-16 items-center justify-between px-6 border-b border-border/40">
         <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Sparkles className="h-5 w-5" />
           </div>
-          GlamFlow
+          GlamOps
         </div>
-        <button 
-          onClick={() => router.push("/auth")}
+        
+        {/* 3. FIX: Changed button to Link pointing to /login */}
+        <Link 
+          href="/login"
           className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
         >
           Login
-        </button>
+        </Link>
       </header>
 
       {/* Hero Section */}
@@ -75,7 +79,7 @@ export default function LandingPage() {
               </>
             ) : (
               <>
-                Try GlamFlow Instantly
+                Try GlamOps Instantly
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </>
             )}
@@ -90,7 +94,6 @@ export default function LandingPage() {
         {/* Mockup / Visual Hint */}
         <div className="mt-16 w-full max-w-5xl rounded-xl border bg-muted/20 p-2 md:p-4 shadow-2xl opacity-90">
            <div className="aspect-[16/9] w-full overflow-hidden rounded-lg border bg-background shadow-sm">
-             {/* This is a placeholder for a screenshot, strictly using CSS to simulate UI */}
              <div className="flex h-full w-full flex-col">
                 <div className="h-14 border-b bg-card flex items-center px-4 gap-4">
                     <div className="h-2 w-24 bg-muted rounded-full"></div>

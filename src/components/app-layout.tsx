@@ -1,8 +1,8 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Calendar, Scissors, Users, User, Settings, Gem, LogOut, Package, ExternalLink, Moon, Sun } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Calendar, Scissors, Users, User, Settings, Gem, LogOut, Package, ExternalLink } from 'lucide-react';
 import { 
   Sidebar, 
   SidebarContent, 
@@ -15,13 +15,16 @@ import {
   SidebarTrigger, 
   SidebarInset 
 } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Button } from './ui/button';
-import { ThemeToggle } from './theme-toggle';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle'; 
+import { useSalon } from "@/hooks/useSalon";
+import { auth } from "@/lib/firebase";
+import { useEffect, useState } from 'react';
 
 const navItems = [
-    { href: '/demo', icon: Home, label: 'Dashboard', tooltip: 'Dashboard' },
+    { href: '/dashboard', icon: Home, label: 'Dashboard', tooltip: 'Dashboard' },
     { href: '/calendar', icon: Calendar, label: 'Calendar', tooltip: 'Calendar' },
     { href: '/services', icon: Scissors, label: 'Services', tooltip: 'Services' },
     { href: '/staff', icon: Users, label: 'Staff', tooltip: 'Staff' },
@@ -31,16 +34,63 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { user, salon, loading } = useSalon();
+    
+    // Fix Hydration Mismatch: Ensure we don't render until client is mounted
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    // --- LOGIC: HIDE SIDEBAR ON PUBLIC PAGES ---
+    const isPublicPage = 
+        pathname === "/" || 
+        pathname === "/login" || 
+        pathname === "/onboarding" ||
+        pathname?.startsWith("/book"); // Safe check with optional chaining
+
+    // Prevent hydration mismatch by returning a simple container during server render if path is ambiguous,
+    // OR just render children if we know it's public.
+    if (isPublicPage) {
+        return (
+            <main className="min-h-screen w-full bg-background text-foreground animate-in fade-in duration-300">
+                {children}
+            </main>
+        );
+    }
+
+    // --- LOGOUT LOGIC ---
+    const handleLogout = async () => {
+        try {
+            await auth.signOut();
+            router.push("/");
+            router.refresh();
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
+    };
+
+    // Helper to get initials
+    const getInitials = (name: string) => {
+        return name ? name.substring(0, 2).toUpperCase() : "GF";
+    };
+
+    // Optional: Show loading state if auth is initializing (prevents flashes)
+    if (!isMounted) return null;
 
     return (
         <SidebarProvider>
-            <Sidebar>
+            <Sidebar collapsible="icon">
                 <SidebarHeader>
-                    <Link href="/" className="flex items-center gap-2 p-2 group" aria-label="GlamFlow Home">
-                       <div className="p-2 bg-primary rounded-lg">
-                         <Gem className="w-6 h-6 text-primary-foreground" />
+                    <Link href="/dashboard" className="flex items-center gap-2 p-2 group" aria-label="GlamOps Home">
+                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                         <Gem className="size-4" />
                        </div>
-                        <h1 className="text-xl font-bold text-foreground group-data-[state=collapsed]:hidden">GlamFlow</h1>
+                        <h1 className="text-xl font-bold text-foreground group-data-[collapsible=icon]:hidden">
+                            GlamOps
+                        </h1>
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-2">
@@ -65,51 +115,73 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                      <SidebarMenu>
                         <SidebarMenuItem>
                            <SidebarMenuButton asChild tooltip="Public Booking">
-                               <a href="/book" target="_blank">
+                               {/* Use Next/Link for better client-side navigation handling */}
+                               <Link 
+                                 href={salon?.slug ? `/book/${salon.slug}` : '#'} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                               >
                                  <ExternalLink />
                                  <span>Public Booking</span>
-                               </a>
+                               </Link>
                            </SidebarMenuButton>
                         </SidebarMenuItem>
                          <SidebarMenuItem>
-                           <SidebarMenuButton asChild tooltip="Onboarding">
-                               <Link href="/onboarding">
-                                 <Package />
-                                 <span>Onboarding</span>
-                               </Link>
-                           </SidebarMenuButton>
+                             {(!salon || salon.type === 'demo') && (
+                                <SidebarMenuButton asChild tooltip="Setup Real Salon">
+                                    <Link href="/onboarding" className="text-primary font-medium">
+                                        <Package />
+                                        <span>Set up Real Salon</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                             )}
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarFooter>
             </Sidebar>
             <SidebarInset>
-                <header className="flex h-14 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 sticky top-0 z-30">
-                    <SidebarTrigger className="sm:hidden" />
-                    <div className="flex-1">
-                        {/* Can add a global search here later */}
+                <header className="flex h-14 items-center justify-between gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6 sticky top-0 z-30">
+                    <div className="flex items-center gap-2">
+                        <SidebarTrigger />
                     </div>
+                    
                     <div className="flex items-center gap-2">
                         <ThemeToggle />
+                        
+                        {/* --- USER PROFILE DROPDOWN --- */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarImage src="https://picsum.photos/seed/owner/100/100" alt="Alex Johnson" />
-                                        <AvatarFallback>AJ</AvatarFallback>
+                                    <Avatar className="h-9 w-9 border">
+                                        <AvatarImage 
+                                            src={user?.photoURL || ""} 
+                                            alt={user?.displayName || "User"} 
+                                        />
+                                        <AvatarFallback>
+                                            {salon?.name ? getInitials(salon.name) : "U"}
+                                        </AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">Alex Johnson</p>
+                                        <p className="text-sm font-medium leading-none">
+                                            {loading ? "Loading..." : (salon?.name || "My Salon")}
+                                        </p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            alex@glamflow.com
+                                            {user?.email || "Guest"}
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/settings" className="cursor-pointer">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer">
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Log out</span>
                                 </DropdownMenuItem>
@@ -117,7 +189,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                <main className="p-4 sm:p-6 lg:p-8">
+                <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
                     {children}
                 </main>
             </SidebarInset>

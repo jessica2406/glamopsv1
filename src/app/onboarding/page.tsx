@@ -8,7 +8,7 @@ export default function OnboardingPage() {
         <div className="p-3 bg-primary rounded-xl">
             <Gem className="w-8 h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-4xl font-bold text-foreground">Welcome to GlamFlow</h1>
+        <h1 className="text-4xl font-bold text-foreground">Welcome to GlamOps</h1>
       </div>
       <OnboardingForm />
     </div>

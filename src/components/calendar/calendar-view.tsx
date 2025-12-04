@@ -1,124 +1,229 @@
 "use client";
 
-import { useState } from 'react';
-import { mockAppointments, mockServices, mockStaff } from '@/lib/mock-data';
-import { format, startOfWeek, addDays, eachHourOfInterval, setHours, differenceInMinutes, areIntervalsOverlapping } from 'date-fns';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import {
+  format,
+  startOfWeek,
+  addDays,
+  eachHourOfInterval,
+  setHours,
+  differenceInMinutes,
+  isSameDay,
+  addMinutes,
+} from "date-fns";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Clock, User } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { AppointmentActions } from "../dashboard/appointment-actions";
 
-export function CalendarView() {
+
+
+interface CalendarViewProps {
+  appointments: any[]; // Data from Firestore
+}
+
+export function CalendarView({ appointments }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const weekStartsOn = 1; // Monday
+
+  // Settings
+  const weekStartsOn = 1; // 0 = Sunday, 1 = Monday
+  const startHour = 8; // 8 AM
+  const endHour = 20; // 8 PM
+  const hourHeight = 64; // Height in pixels per hour slot
+
   const weekStart = startOfWeek(currentDate, { weekStartsOn });
 
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const timeSlots = eachHourOfInterval({
-    start: setHours(new Date(0), 8),
-    end: setHours(new Date(0), 20),
+    start: setHours(new Date(0), startHour),
+    end: setHours(new Date(0), endHour),
   });
 
-  const handlePrevWeek = () => {
-    setCurrentDate(prev => addDays(prev, -7));
-  };
-
-  const handleNextWeek = () => {
-    setCurrentDate(prev => addDays(prev, 7));
-  };
-
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
-
   return (
-    <Card>
-      <CardHeader className="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <Card className="border-0 shadow-none">
+      {/* HEADER CONTROLS */}
+      <CardHeader className="flex flex-row items-center justify-between p-2 pb-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePrevWeek}><ChevronLeft className="h-4 w-4" /></Button>
-          <Button variant="outline" onClick={handleNextWeek}><ChevronRight className="h-4 w-4" /></Button>
-          <Button variant="outline" onClick={handleToday}>Today</Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentDate((prev) => addDays(prev, -7))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentDate((prev) => addDays(prev, 7))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentDate(new Date())}
+          >
+            Today
+          </Button>
         </div>
-        <h2 className="text-lg font-semibold text-center">
-          {format(weekStart, 'MMMM yyyy')}
+        <h2 className="text-sm font-semibold">
+          {format(weekStart, "MMM d")} -{" "}
+          {format(addDays(weekStart, 6), "MMM d, yyyy")}
         </h2>
-        <div className="w-full sm:w-auto"></div>
       </CardHeader>
+
       <CardContent className="p-0">
-        <div className="grid grid-cols-[auto_1fr] overflow-auto">
-          {/* Time column */}
-          <div className="grid grid-rows-[auto_1fr]">
-             <div className="h-12"></div>
-             <div className="border-r">
-                {timeSlots.map(hour => (
-                  <div key={hour.toISOString()} className="h-16 text-right pr-2 text-xs text-muted-foreground border-t -mt-px pt-1">
-                    {format(hour, 'ha')}
+        <div className="flex flex-col h-[500px] overflow-y-auto border rounded-md">
+          {/* GRID HEADER (Days) */}
+          <div className="flex border-b sticky top-0 bg-background z-10">
+            <div className="w-12 flex-shrink-0 border-r bg-muted/30"></div>{" "}
+            {/* Time Column Header */}
+            <div className="grid grid-cols-7 flex-1">
+              {days.map((day) => (
+                <div
+                  key={day.toISOString()}
+                  className="text-center py-2 border-r last:border-r-0"
+                >
+                  <p className="text-xs text-muted-foreground uppercase">
+                    {format(day, "EEE")}
+                  </p>
+                  <div
+                    className={cn(
+                      "text-sm font-bold w-7 h-7 mx-auto flex items-center justify-center rounded-full mt-1",
+                      isSameDay(day, new Date())
+                        ? "bg-primary text-primary-foreground"
+                        : ""
+                    )}
+                  >
+                    {format(day, "d")}
                   </div>
-                ))}
-             </div>
-          </div>
-          
-          {/* Day columns */}
-          <div className="grid grid-cols-7 relative">
-            {days.map(day => (
-              <div key={day.toISOString()} className="border-r last:border-r-0">
-                <div className="text-center p-2 border-b h-12">
-                  <p className="text-sm font-medium">{format(day, 'E')}</p>
-                  <p className="text-2xl font-bold">{format(day, 'd')}</p>
                 </div>
-                
-                {/* Hour slots for this day */}
-                <div className="relative">
-                  {timeSlots.map(hour => (
-                    <div key={hour.toISOString()} className="h-16 border-t -mt-px"></div>
-                  ))}
-                  
-                  {/* Appointments for this day */}
-                  {mockAppointments
-                    .filter(apt => format(apt.startTime, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'))
-                    .map(apt => {
-                      const service = mockServices.find(s => s.id === apt.serviceId);
-                      const staff = mockStaff.find(s => s.id === apt.staffId);
-                      const top = (differenceInMinutes(apt.startTime, setHours(day, 8)) / 60) * 64;
-                      const height = (service?.duration || 0) / 60 * 64;
+              ))}
+            </div>
+          </div>
+
+          {/* GRID BODY */}
+          <div className="flex relative">
+            {/* Time Labels Column */}
+            <div className="w-12 flex-shrink-0 border-r bg-muted/10">
+              {timeSlots.map((hour) => (
+                <div
+                  key={hour.toISOString()}
+                  style={{ height: `${hourHeight}px` }}
+                  className="text-right pr-2 text-[10px] text-muted-foreground pt-1 border-b border-transparent"
+                >
+                  {format(hour, "h a")}
+                </div>
+              ))}
+            </div>
+
+            {/* Days Columns */}
+            <div className="grid grid-cols-7 flex-1 relative">
+              {/* Background Grid Lines */}
+              <div className="absolute inset-0 grid grid-rows-[repeat(13,1fr)] w-full h-full pointer-events-none z-0">
+                {timeSlots.map((_, i) => (
+                  <div
+                    key={i}
+                    style={{ height: `${hourHeight}px` }}
+                    className="border-b w-full border-dashed border-gray-100"
+                  ></div>
+                ))}
+              </div>
+
+              {days.map((day) => (
+                <div
+                  key={day.toISOString()}
+                  className="relative border-r last:border-r-0 h-full"
+                >
+                  {/* RENDER APPOINTMENTS FOR THIS DAY */}
+                  {appointments
+                    .filter((apt) => isSameDay(apt.date, day))
+                    .map((apt) => {
+                      // Calculations
+                      const startTime = apt.date; // Firestore Date
+                      const duration = apt.duration || 60; // Default 60 mins if missing
+
+                      // Calculate Top Position relative to 8 AM
+                      const startMinutes = differenceInMinutes(
+                        startTime,
+                        setHours(day, startHour)
+                      );
+                      const top = (startMinutes / 60) * hourHeight;
+                      const height = (duration / 60) * hourHeight;
 
                       return (
                         <Popover key={apt.id}>
                           <PopoverTrigger asChild>
                             <div
-                              className="absolute w-[calc(100%-0.5rem)] left-1 p-2 rounded-lg bg-primary/20 text-primary-foreground border border-primary/50 cursor-grab hover:bg-primary/30 transition-colors"
-                              style={{ top: `${top}px`, height: `${height}px` }}
-                              title={`${service?.name} with ${staff?.name}`}
+                              className="absolute left-1 right-1 rounded bg-primary/10 border-l-2 border-primary cursor-pointer hover:bg-primary/20 transition-all z-10 p-1 overflow-hidden"
+                              style={{
+                                top: `${Math.max(0, top)}px`,
+                                height: `${Math.max(20, height)}px`,
+                              }}
                             >
-                              <p className="text-xs font-bold text-primary truncate">{service?.name}</p>
-                              <p className="text-xs text-primary/80 truncate">{apt.customerName}</p>
+                              <div className="text-[10px] font-bold text-primary truncate leading-tight">
+                                {apt.clientName}
+                              </div>
+                              {height > 30 && (
+                                <div className="text-[9px] text-primary/70 truncate">
+                                  {apt.serviceName}
+                                </div>
+                              )}
                             </div>
                           </PopoverTrigger>
-                          <PopoverContent className="w-64">
+                          <PopoverContent className="w-64 p-3 shadow-xl">
                             <div className="space-y-2">
-                              <h4 className="font-medium leading-none">{service?.name}</h4>
-                              <p className="text-sm text-muted-foreground">{apt.customerName}</p>
-                              <div className="flex items-center pt-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={staff?.avatarUrl} />
-                                  <AvatarFallback>{staff?.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div className="ml-2">
-                                  <p className="text-xs text-muted-foreground">with</p>
-                                  <p className="text-sm font-medium">{staff?.name}</p>
+                              <div className="flex justify-between items-start border-b pb-2">
+                                <h4 className="font-semibold text-sm">
+                                  {apt.serviceName}
+                                </h4>
+                                {/* ADD THIS LINE */}
+                                <div className="-mt-1 -mr-2">
+                                  <AppointmentActions
+                                    appointment={apt}
+                                    
+                                  />
                                 </div>
                               </div>
-                              <p className="text-sm pt-2">{format(apt.startTime, 'eeee, MMM d, h:mm a')} - {format(apt.endTime, 'h:mm a')}</p>
+
+                              <div className="space-y-1 text-sm">
+                                {/* ... existing info details ... */}
+
+                                {/* Update Status Badge Logic */}
+                                <div className="pt-2 flex items-center justify-between text-xs">
+                                  <span
+                                    className={cn(
+                                      "px-2 py-0.5 rounded-full capitalize",
+                                      apt.status === "cancelled"
+                                        ? "bg-red-100 text-red-700"
+                                        : apt.status === "completed"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-green-100 text-green-700"
+                                    )}
+                                  >
+                                    {apt.status || "Confirmed"}
+                                  </span>
+                                  <span className="font-bold">
+                                    ${apt.price}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </PopoverContent>
                         </Popover>
                       );
                     })}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -1,18 +1,16 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from "@/components/ui/toaster"
+import { AppLayout } from "@/components/app-layout"; // <--- IMPORT THIS
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GlamFlow',
+  title: 'GlamOps',
   description: 'Salon Management Made Easy',
 };
 
-// FIX: This stops the automatic zoom on mobile devices
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // maximumScale: 1,  <-- REMOVE THIS
-  // userScalable: false, <-- REMOVE THIS OR SET TO TRUE
   themeColor: "#ffffff",
 };
 
@@ -29,7 +27,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        {children}
+        {/* WRAP CHILDREN IN APP LAYOUT TO SHOW SIDEBAR */}
+        <AppLayout>
+            {children}
+        </AppLayout>
+        
         <Toaster />
       </body>
     </html>
