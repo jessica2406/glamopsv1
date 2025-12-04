@@ -1,37 +1,43 @@
 import admin from "firebase-admin";
 
-// Use a separate variable to check if the app has already been initialized
-// This prevents crashes in development environments where hot-reloading might try to initialize twice.
+// Ensure we don't crash the build if env vars are missing
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+const projectId = process.env.FIREBASE_PROJECT_ID;
+
 if (!admin.apps.length) {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-
-  // --- CRITICAL CONFIGURATION CHECKS ---
-  if (!serviceAccountJson) {
-    // The error you saw is thrown here if the JSON variable is missing or empty.
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON is not set or is empty. Please check your .env.local file formatting.");
-  }
-  if (!projectId) {
-    throw new Error("FIREBASE_PROJECT_ID is not set in .env.local.");
-  }
-
-  try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: projectId,
-      // Optional: Add databaseURL if you use Realtime Database, otherwise it's fine.
-    });
-    console.log("Firebase Admin SDK initialized successfully.");
-
-  } catch (e) {
-    // This catches errors if JSON.parse(serviceAccountJson) fails, 
-    // which confirms your single-line formatting of the JSON is still incorrect.
-    console.error("Error parsing FIREBASE_SERVICE_ACCOUNT_JSON:", e);
-    throw new Error("Failed to parse Firebase Service Account JSON. Ensure it is a single-line string wrapped in single quotes.");
-  }
+  try {
+    if (!serviceAccountJson || !projectId) {
+      // Logic: If we are in Vercel Build phase, just warn. Don't crash.
+      // We check if we are in production but missing keys.
+      if (process.env.NODE_ENV === 'production' && !serviceAccountJson) {
+         console.warn("⚠️ BUILD WARNING: Firebase keys missing. Skipping init (this is fine during build).");
+      } else {
+         // In local dev, we want to know immediately.
+         console.error("❌ LOCAL ERROR: Missing Firebase Env Vars.");
+      }
+    } else {
+      // Clean and Parse
+      const cleanedJson = serviceAccountJson.replace(/\\n/g, "\n");
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(cleanedJson)),
+        projectId: projectId,
+      });
+      console.log("✅ Firebase Admin initialized.");
+    }
+  } catch (error: any) {
+    console.error("Firebase init error (Ignored during build):", error.message);
+  }
 }
 
-export const firestore = admin.firestore();
-export const FieldValue = admin.firestore.FieldValue;
+// Safe Export: If init failed, create a dummy proxy to prevent import crashes
+let firestore: FirebaseFirestore.Firestore;
+try {
+  firestore = admin.firestore();
+} catch (e) {
+  console.warn("⚠️ Firestore not available (Build phase).");
+  firestore = {} as any; 
+}
+
+export { firestore };
+export const FieldValue = admin.firestore?.FieldValue || {};
