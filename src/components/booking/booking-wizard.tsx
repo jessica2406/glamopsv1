@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, ArrowLeft, Users, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Users, Loader2, CheckCircle, ShieldCheck, Mail } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format, isBefore, startOfDay } from "date-fns";
+import { isBefore, startOfDay } from "date-fns";
 import { Service, Staff } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -22,14 +22,14 @@ const steps = [
   { id: 1, name: "Select Service" },
   { id: 2, name: "Choose Date & Time" },
   { id: 3, name: "Select Staff" },
-  { id: 4, name: "Your Details" },
+  { id: 4, name: "Details & Verify" },
 ];
 
 interface BookingWizardProps {
   salonId: string;
   services: Service[];
   staffList: Staff[];
-  salonSlug: string;     // <-- added
+  salonSlug: string;
 }
 
 export function BookingWizard({ salonId, services, staffList, salonSlug }: BookingWizardProps) {
@@ -48,6 +48,12 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  // OTP / Verification State
+  const [isVerified, setIsVerified] = useState(false); // Can we proceed?
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+
   const progress = (step / steps.length) * 100;
   const service = services.find(s => s.id === selectedServiceId);
 
@@ -56,6 +62,76 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
     "12:00","12:30","13:00","13:30","14:00","14:30",
     "15:00","15:30","16:00","16:30","17:00","17:30"
   ];
+
+  // 1. Check if user is ALREADY verified on load
+  useEffect(() => {
+    const checkAuth = async () => {
+        try {
+            const res = await fetch('/api/me');
+            const data = await res.json();
+            if (data.isAuthenticated && data.email) {
+                setEmail(data.email);
+                setIsVerified(true); // Skip OTP flow!
+            }
+        } catch (e) {
+            console.error("Auth check failed", e);
+        }
+    }
+    checkAuth();
+  }, []);
+
+  // 2. Send OTP Logic
+  const handleSendOtp = async () => {
+      if (!email || !email.includes('@')) {
+          alert("Please enter a valid email address.");
+          return;
+      }
+      setOtpLoading(true);
+      try {
+          const res = await fetch("/api/send-otp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setOtpSent(true);
+              alert(`OTP sent to ${email}`);
+          } else {
+              alert(data.error || "Failed to send OTP");
+          }
+      } catch (e) {
+          alert("Network error sending OTP");
+      } finally {
+          setOtpLoading(false);
+      }
+  };
+
+  // 3. Verify OTP Logic
+  const handleVerifyOtp = async () => {
+      if (!otp) return;
+      setOtpLoading(true);
+      try {
+          const res = await fetch("/api/verify-otp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, otp }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+              setIsVerified(true);
+              // Also save to localStorage for the Results page fallback
+              localStorage.setItem('userEmail', email); 
+          } else {
+              alert(data.error || "Invalid OTP");
+          }
+      } catch (e) {
+          alert("Verification failed");
+      } finally {
+          setOtpLoading(false);
+      }
+  };
+
 
   const handleNext = async () => {
     if (step < steps.length) {
@@ -70,14 +146,16 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
   };
 
   const handleSubmit = async () => {
-    if (!selectedServiceId || !selectedDate || !selectedTime || !name) return;
+    if (!isVerified) {
+        alert("Please verify your email first.");
+        return;
+    }
     setLoading(true);
 
     try {
-      // 1. Staff handling
+      // Staff logic
       let finalStaffId = selectedStaffId;
       let finalStaffName = "Any Available";
-
       if (selectedStaffId === "no-preference" && staffList.length > 0) {
         const randomStaff = staffList[Math.floor(Math.random() * staffList.length)];
         finalStaffId = randomStaff.id;
@@ -87,21 +165,18 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
         if (s) finalStaffName = s.name;
       }
 
-      // 2. Combine date + time
-      const [hours, minutes] = selectedTime.split(":").map(Number);
-      const appointmentDate = new Date(selectedDate);
+      const [hours, minutes] = (selectedTime || "00:00").split(":").map(Number);
+      const appointmentDate = new Date(selectedDate || new Date());
       appointmentDate.setHours(hours, minutes, 0, 0);
 
-      // 3. Get or create customer
       const customerId = await getOrCreateCustomer(salonId, name, email);
       await incrementCustomerVisits(salonId, customerId);
 
-      // 4. Create appointment
       const docRef = await addDoc(collection(db, "salons", salonId, "appointments"), {
         salonId,
         customerId,
         clientName: name,
-        clientEmail: email,
+        clientEmail: email, // This is now guaranteed verified
         clientPhone: phone,
         serviceId: selectedServiceId,
         serviceName: service?.name,
@@ -114,12 +189,11 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
         createdAt: serverTimestamp()
       });
 
-      // 5. Redirect to confirmation page
       router.push(`/book/${salonSlug}/appointment/${docRef.id}`);
 
     } catch (error) {
       console.error("Booking failed:", error);
-      alert("Something went wrong. Please try again.");
+      alert("Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -197,8 +271,6 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
         {step === 3 && (
           <RadioGroup value={selectedStaffId ?? "no-preference"} onValueChange={setSelectedStaffId}>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-
-              {/* No preference */}
               <Label
                 htmlFor="no-preference"
                 className={cn(
@@ -212,8 +284,6 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
                 </div>
                 <p className="font-semibold">No Preference</p>
               </Label>
-
-              {/* Staff List */}
               {staffList.map(staff => (
                 <Label
                   key={staff.id}
@@ -229,27 +299,111 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
                     <AvatarFallback>{staff.name[0]}</AvatarFallback>
                   </Avatar>
                   <p className="font-semibold">{staff.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{staff.role}</p>
                 </Label>
               ))}
             </div>
           </RadioGroup>
         )}
 
-        {/* STEP 4 – CUSTOMER DETAILS */}
+        {/* STEP 4 – CUSTOMER DETAILS & VERIFICATION */}
         {step === 4 && (
           <div className="space-y-6 max-w-md mx-auto">
+            {/* Name Input */}
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} />
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={e => setName(e.target.value)} 
+                placeholder="Jane Doe"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
+            
+            {/* Phone Input */}
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+              <Input 
+                id="phone" 
+                type="tel" 
+                value={phone} 
+                onChange={e => setPhone(e.target.value)} 
+                placeholder="+91 98765 43210"
+              />
+            </div>
+
+            <div className="my-4 border-t pt-4"></div>
+
+            {/* CONDITIONAL EMAIL VERIFICATION */}
+            <div className="space-y-3">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                    Email Address
+                    {isVerified && <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full font-bold flex items-center"><CheckCircle className="w-3 h-3 mr-1"/> Verified</span>}
+                </Label>
+                
+                <div className="relative">
+                    <Input 
+                        id="email" 
+                        type="email" 
+                        value={email} 
+                        onChange={e => {
+                            // If they change email after verifying, reset verification!
+                            if (isVerified) {
+                                setIsVerified(false);
+                                setOtpSent(false);
+                                setOtp("");
+                            }
+                            setEmail(e.target.value)
+                        }} 
+                        placeholder="jane@example.com"
+                        className={isVerified ? "bg-green-50 border-green-200 pr-10" : ""}
+                        // Optional: ReadOnly if you don't want them changing it after verify
+                        // readOnly={isVerified} 
+                    />
+                    {isVerified && (
+                        <ShieldCheck className="absolute right-3 top-2.5 h-5 w-5 text-green-600" />
+                    )}
+                </div>
+
+                {/* OTP SECTION (Only if NOT verified) */}
+                {!isVerified && (
+                    <div className="bg-slate-50 p-4 rounded-lg border space-y-3 animate-in fade-in zoom-in-95 duration-300">
+                        {!otpSent ? (
+                            <div className="space-y-2">
+                                <p className="text-sm text-slate-500">
+                                    We need to verify your email to confirm the booking.
+                                </p>
+                                <Button 
+                                    onClick={handleSendOtp} 
+                                    disabled={otpLoading || !email} 
+                                    variant="secondary" 
+                                    className="w-full"
+                                >
+                                    {otpLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <Mail className="w-4 h-4 mr-2"/>}
+                                    Send Verification Code
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label htmlFor="otp">Enter Verification Code</Label>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        id="otp" 
+                                        value={otp} 
+                                        onChange={e => setOtp(e.target.value)} 
+                                        placeholder="123456" 
+                                        className="tracking-widest"
+                                    />
+                                    <Button onClick={handleVerifyOtp} disabled={otpLoading || otp.length < 6}>
+                                        {otpLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : "Verify"}
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground text-center">
+                                    Sent to {email}. <button onClick={() => setOtpSent(false)} className="underline text-primary">Wrong email?</button>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
           </div>
         )}
@@ -266,7 +420,7 @@ export function BookingWizard({ salonId, services, staffList, salonSlug }: Booki
             loading ||
             (step === 1 && !selectedServiceId) ||
             (step === 2 && (!selectedDate || !selectedTime)) ||
-            (step === 4 && !name)
+            (step === 4 && (!name || !isVerified)) // BLOCKER: Must be verified
           }
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
