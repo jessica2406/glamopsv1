@@ -37,15 +37,19 @@ export interface Service {
   price: number;
   duration: number;
   description?: string;
+  active?: boolean;
+  category?: string;
 }
 
 // THIS IS THE IMPORTANT ONE
 export interface Staff {
   id: string;
   name: string;
+  phone?: string;
   role: string;
   avatarUrl?: string; // <--- This must be here
   active?: boolean;
+  email?: string;
   workingHours?: { start: string; end: string };
   salonId?: string;
   createdAt?: Date | Timestamp;

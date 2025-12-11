@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // <--- 1. Import Link
+import Link from "next/link";
 import { startInstantDemo } from "@/lib/demo-setup";
-import { Sparkles, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight, CheckCircle2, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function LandingPage() {
@@ -15,7 +15,6 @@ export default function LandingPage() {
     setIsLoading(true);
     try {
       await startInstantDemo();
-      // 2. FIX: Redirect to dashboard (Unified view), not /demo
       router.push("/dashboard"); 
     } catch (error) {
       console.error("Failed to start demo:", error);
@@ -34,7 +33,6 @@ export default function LandingPage() {
           GlamOps
         </div>
         
-        {/* 3. FIX: Changed button to Link pointing to /login */}
         <Link 
           href="/login"
           className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
@@ -62,13 +60,15 @@ export default function LandingPage() {
           Experience the full platform right now—no credit card, no signup.
         </p>
 
-        {/* CTA Button */}
-        <div className="mt-10 flex flex-col items-center gap-4">
+        {/* CTA Buttons Container */}
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+          
+          {/* Button 1: Instant Demo */}
           <button
             onClick={handleStartDemo}
             disabled={isLoading}
             className={cn(
-              "group relative inline-flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:scale-105 hover:shadow-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed",
+              "group relative inline-flex h-14 w-full sm:w-auto items-center justify-center rounded-full bg-primary px-8 text-lg font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:scale-105 hover:shadow-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed",
               isLoading && "cursor-wait opacity-90"
             )}
           >
@@ -84,12 +84,22 @@ export default function LandingPage() {
               </>
             )}
           </button>
-          
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-            See how it works in 10 seconds
-          </p>
+
+          {/* Button 2: Set up Real Salon */}
+          <Link
+            href="/onboarding"
+            className="group inline-flex h-14 w-full sm:w-auto items-center justify-center rounded-full border-2 border-muted bg-transparent px-8 text-lg font-medium text-foreground transition-all hover:border-primary hover:text-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            <Store className="mr-2 h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            Set up real salon
+          </Link>
         </div>
+
+        {/* Helper Text */}
+        <p className="mt-6 text-sm text-muted-foreground flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+            See how it works in 10 seconds with the Demo
+        </p>
 
         {/* Mockup / Visual Hint */}
         <div className="mt-16 w-full max-w-5xl rounded-xl border bg-muted/20 p-2 md:p-4 shadow-2xl opacity-90">

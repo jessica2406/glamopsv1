@@ -1,63 +1,90 @@
-import { Service, Staff, Customer, Appointment } from '@/lib/types';
-import { addMinutes, set, subDays, addDays } from 'date-fns';
+// 1. FIX: Import from the correct location
+import { Service, Staff } from "@/types"; 
+import { addMinutes, subDays, addDays, setHours, setMinutes } from 'date-fns';
 
 // Mock Services
 export const mockServices: Service[] = [
-  { id: '1', name: 'Precision Haircut', description: 'A tailored haircut to suit your style.', price: 50, duration: 45 },
-  { id: '2', name: 'Balayage Highlighting', description: 'Natural-looking, sun-kissed highlights.', price: 150, duration: 120 },
-  { id: '3', name: 'Manicure & Pedicure', description: 'Full nail care for hands and feet.', price: 75, duration: 60 },
-  { id: '4', name: 'Deep Tissue Massage', description: 'Relieve muscle tension and stress.', price: 100, duration: 60 },
-  { id: '5', name: 'Signature Facial', description: 'A rejuvenating facial for glowing skin.', price: 85, duration: 50 },
-  { id: '6', name: 'Classic Lash Extensions', description: 'Enhance your eyes with beautiful lashes.', price: 120, duration: 90 },
+  { id: '1', name: 'Precision Haircut', description: 'A tailored haircut to suit your style.', price: 50, duration: 45, category: 'Hair', active: true },
+  { id: '2', name: 'Balayage Highlighting', description: 'Natural-looking, sun-kissed highlights.', price: 150, duration: 120, category: 'Hair', active: true },
+  { id: '3', name: 'Manicure & Pedicure', description: 'Full nail care for hands and feet.', price: 75, duration: 60, category: 'Nails', active: true },
+  { id: '4', name: 'Deep Tissue Massage', description: 'Relieve muscle tension and stress.', price: 100, duration: 60, category: 'Massage', active: true },
+  { id: '5', name: 'Signature Facial', description: 'A rejuvenating facial for glowing skin.', price: 85, duration: 50, category: 'Skin', active: true },
 ];
 
 // Mock Staff
 export const mockStaff: Staff[] = [
-  { id: '1', name: 'Alex Johnson', email: 'alex@glamops.com', role: 'owner', avatarUrl: 'https://picsum.photos/seed/staff1/100/100', workingHours: { start: '09:00', end: '17:00' } },
-  { id: '2', name: 'Maria Garcia', email: 'maria@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff2/100/100', workingHours: { start: '09:00', end: '17:00' } },
-  { id: '3', name: 'James Smith', email: 'james@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff3/100/100', workingHours: { start: '10:00', end: '18:00' } },
-  { id: '4', name: 'Chloe Williams', email: 'chloe@glamops.com', role: 'staff', avatarUrl: 'https://picsum.photos/seed/staff4/100/100', workingHours: { start: '11:00', end: '19:00' } },
+  { id: '1', name: 'Jessica', email: 'jessica@glamops.com', role: 'owner', avatarUrl: '', phone: '123-456-7890', active: true },
+  { id: '2', name: 'Sarah', email: 'sarah@glamops.com', role: 'staff', avatarUrl: '', phone: '123-456-7890', active: true },
+  { id: '3', name: 'Mike', email: 'mike@glamops.com', role: 'staff', avatarUrl: '', phone: '123-456-7890', active: true },
 ];
 
-// Mock Customers
-export const mockCustomers: Customer[] = [
-  { id: '1', name: 'Emily White', email: 'emily@example.com', phone: '555-0101', totalAppointments: 5, lastVisit: subDays(new Date(), 10) },
-  { id: '2', name: 'Daniel Green', email: 'daniel@example.com', phone: '555-0102', totalAppointments: 2, lastVisit: subDays(new Date(), 30) },
-  { id: '3', name: 'Sophia Black', email: 'sophia@example.com', phone: '555-0103', totalAppointments: 8, lastVisit: subDays(new Date(), 5) },
-  { id: '4', name: 'Liam Brown', email: 'liam@example.com', phone: '555-0104', totalAppointments: 1, lastVisit: subDays(new Date(), 90) },
-  { id: '5', name: 'Olivia Gray', email: 'olivia@example.com', phone: '555-0105', totalAppointments: 12, lastVisit: subDays(new Date(), 2) },
-];
-
-export const generateMockAppointments = (): Appointment[] => {
-  // Use a fixed date to ensure server and client renders are the same.
-  const today = new Date('2024-07-29T12:00:00.000Z');
+// 2. FIX: Generate Appointments with the structure the DASHBOARD expects
+// (clientName, serviceName, price, date)
+export const generateMockAppointments = () => {
+  const today = new Date();
   
-  const addDaysLocal = (date: Date, days: number): Date => {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-  };
-
-  return Array.from({ length: 25 }, (_, i) => {
-    const customer = mockCustomers[i % mockCustomers.length];
-    const service = mockServices[i % mockServices.length];
-    const staff = mockStaff[i % mockStaff.length];
-    const dayOffset = (i % 5) - 2; // Appointments from 2 days ago to 2 days in the future
-    const hour = 9 + (i % 8); // Appointments between 9 AM and 4 PM
-    const minute = (i % 4) * 15;
-    const startTime = set(addDaysLocal(today, dayOffset), { hours: hour, minutes: minute, seconds: 0, milliseconds: 0 });
-
-    return {
-      id: `${i + 1}`,
-      customerName: customer.name,
-      serviceId: service.id,
-      staffId: staff.id,
-      startTime,
-      endTime: addMinutes(startTime, service.duration),
-      status: i % 4 === 0 ? 'Cancelled' : (startTime < today ? 'Completed' : 'Confirmed'),
-    };
-  });
+  return [
+    {
+      id: "1",
+      clientName: "Guest Client 24",
+      clientEmail: "guest24@example.com",
+      serviceName: "Gel Manicure w/ Jessica",
+      staffName: "Jessica",
+      price: 50,
+      status: "confirmed",
+      // Today at 2:00 PM
+      date: setMinutes(setHours(today, 14), 0),
+      duration: 45
+    },
+    {
+      id: "2",
+      clientName: "Guest Client 16",
+      clientEmail: "guest16@example.com",
+      serviceName: "Silk Press w/ Sarah",
+      staffName: "Sarah",
+      price: 150,
+      status: "confirmed",
+      // Today at 11:30 AM
+      date: setMinutes(setHours(today, 11), 30),
+      duration: 120
+    },
+    {
+      id: "3",
+      clientName: "Guest Client 09",
+      clientEmail: "guest09@example.com",
+      serviceName: "Haircut",
+      staffName: "Mike",
+      price: 50,
+      status: "completed",
+      // Yesterday
+      date: subDays(setHours(today, 10), 1),
+      duration: 45
+    },
+    {
+      id: "4",
+      clientName: "Alice Wonderland",
+      clientEmail: "alice@example.com",
+      serviceName: "Signature Facial",
+      staffName: "Jessica",
+      price: 85,
+      status: "confirmed",
+      // Tomorrow
+      date: addDays(setHours(today, 9), 1),
+      duration: 50
+    },
+    {
+      id: "5",
+      clientName: "Bob Builder",
+      clientEmail: "bob@example.com",
+      serviceName: "Deep Tissue Massage",
+      staffName: "Mike",
+      price: 100,
+      status: "cancelled",
+      // Today at 4:00 PM
+      date: setMinutes(setHours(today, 16), 0),
+      duration: 60
+    }
+  ];
 };
-
 
 export const mockAppointments = generateMockAppointments();

@@ -143,7 +143,7 @@ export function NewAppointmentModal() {
                     <Input placeholder="Jane Doe" value={clientName} onChange={e => setClientName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                    <Label>Email (*)</Label>
+                    <Label>Email *</Label>
                     <Input placeholder="jane@example.com" value={clientEmail} onChange={e => setClientEmail(e.target.value)} />
                 </div>
             </div>
